@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remover Senha de PDF — Cricon</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --ink:#1A1A1A;
+  --ink-soft:#65656B;
+  --paper:#E7E6E2;
+  --paper-raised:#FFFFFF;
+  --rule:#D6D5D1;
+  --rule-strong:#A9A7A2;
+  --red:#A6392C;
+  --red-bg:#F6E1DC;
+  --green-ink:#1F5E3C;
+  --green-bg:#DEEEE3;
+  --amber:#8A6400;
+  --amber-bg:#FCEEA9;
+  --accent:#2B4C7E;
+  --accent-bg:#DDE6F2;
+  --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.06);
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'IBM Plex Sans',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:820px;margin:0 auto;padding:28px 20px 80px;}
+
+.topbar{padding-bottom:18px;margin-bottom:22px;border-bottom:2px solid var(--ink);display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.brand h1{font-family:'Source Serif 4',serif;font-size:24px;font-weight:800;margin:0 0 4px;letter-spacing:-0.01em;}
+.brand .sub{font-size:13px;color:var(--ink-soft);}
+.backlink{font-size:12.5px;color:var(--ink-soft);text-decoration:none;border-bottom:1px dotted var(--ink-soft);}
+.backlink:hover{color:var(--ink);}
+.cricon-brand{display:flex;align-items:center;gap:8px;}
+.cricon-brand svg{width:28px;height:auto;flex-shrink:0;}
+.cricon-brand .cw{line-height:1.05;text-align:right;}
+.cricon-brand .cw .nm{font-family:'Source Serif 4',serif;font-style:italic;font-weight:700;font-size:14px;color:#5D4232;white-space:nowrap;}
+.cricon-brand .cw .tg{font-family:'IBM Plex Sans',sans-serif;font-size:9px;color:var(--ink-soft);letter-spacing:.02em;white-space:nowrap;}
+
+.card{background:var(--paper-raised);border:1.5px solid var(--ink);border-radius:6px;box-shadow:var(--shadow);padding:22px;margin-bottom:20px;}
+.card h2{font-family:'Source Serif 4',serif;font-size:17px;margin:0 0 14px;}
+
+.notice{border:1.5px solid var(--amber);background:var(--amber-bg);color:#5c4600;border-radius:6px;padding:12px 14px;font-size:13px;margin-bottom:20px;line-height:1.5;}
+.notice.err{border-color:var(--red);background:var(--red-bg);color:var(--red);}
+
+.dropzone{border:2px dashed var(--rule-strong);border-radius:6px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+.dropzone:hover,.dropzone.drag{border-color:var(--ink);background:var(--accent-bg);}
+.dropzone .dz-icon{font-size:28px;margin-bottom:6px;}
+.dropzone .dz-text{font-size:14px;color:var(--ink-soft);}
+.dropzone .dz-text b{color:var(--ink);}
+input[type=file]{display:none;}
+
+.filelist{margin-top:16px;display:flex;flex-direction:column;gap:8px;}
+.file-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1.5px solid var(--rule);border-radius:5px;background:var(--paper);}
+.file-row .fi-name{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.file-row .fi-size{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;flex-shrink:0;}
+.file-row .fi-remove{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;flex-shrink:0;}
+.file-row .fi-remove:hover{color:var(--red);}
+
+.badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.03em;padding:2px 8px;border-radius:10px;font-weight:600;flex-shrink:0;white-space:nowrap;}
+.badge.pending{background:var(--rule);color:var(--ink-soft);}
+.badge.processing{background:var(--accent-bg);color:var(--accent);}
+.badge.ok{background:var(--green-bg);color:var(--green-ink);}
+.badge.err{background:var(--red-bg);color:var(--red);}
+
+.field{margin-top:16px;max-width:320px;}
+.field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:4px;font-family:'IBM Plex Mono',monospace;}
+.pw-row{display:flex;gap:6px;}
+.pw-row input{flex:1;padding:8px 9px;border:1.5px solid var(--rule-strong);border-radius:4px;font-size:14px;font-family:'IBM Plex Mono',monospace;background:var(--paper-raised);color:var(--ink);}
+.pw-row input:focus{outline:none;border-color:var(--ink);}
+.pw-toggle{padding:8px 10px;border:1.5px solid var(--rule-strong);border-radius:4px;background:var(--paper-raised);cursor:pointer;font-size:13px;}
+.pw-toggle:hover{border-color:var(--ink);}
+.hint{font-size:11.5px;color:var(--ink-soft);margin-top:6px;}
+
+.btn{padding:10px 18px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;font-weight:600;font-size:14px;transition:transform .08s ease,opacity .15s;font-family:'IBM Plex Sans',sans-serif;}
+.btn:hover{opacity:.88;}
+.btn:active{transform:translateY(1px);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn.ghost{background:transparent;color:var(--ink);}
+.btn.ghost:hover{background:rgba(0,0,0,0.06);}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;}
+
+.status-line{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-soft);margin-top:10px;}
+.status-line.err{color:var(--red);}
+.status-line.ok{color:var(--green-ink);}
+
+footer{margin-top:30px;color:var(--ink-soft);font-size:11.5px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <h1>Remover Senha de PDF</h1>
+      <div class="sub">Remove a senha de proteção e substitui o arquivo original no disco</div>
+      <a class="backlink" href="https://criconcontabilidade.github.io/Cricon-Ferramentas/" target="_blank" rel="noopener">← voltar ao Hub</a>
+    </div>
+    <div class="cricon-brand">
+      <svg viewBox="0 0 141 109" xmlns="http://www.w3.org/2000/svg"><path d="M 15.33 33.25 L 9.50 52.58 L 11.33 74.33 L 19.08 90.67 L 36.17 102.92 L 57.25 104.92 L 73.25 100.08 L 84.92 104.83 L 100.25 104.83 L 115.75 97.92 L 126.00 85.67 L 129.92 74.17 L 130.25 61.92 L 60.92 62.08 L 62.42 49.00 L 130.58 48.75 L 129.92 37.75 L 126.75 29.75 L 118.33 20.33 L 111.42 16.33 L 97.92 12.75 L 88.58 12.67 L 72.58 18.17 L 59.83 13.67 L 41.33 13.58 L 26.42 20.42 Z M 78.58 93.58 L 86.00 80.08 L 86.00 78.42 L 87.00 77.08 L 87.00 74.33 L 87.92 72.75 L 88.33 69.50 L 120.42 69.42 L 121.00 69.92 L 121.08 74.17 L 120.17 75.42 L 120.08 77.17 L 119.25 78.25 L 119.25 79.58 L 117.33 83.67 L 115.83 85.17 L 114.75 87.33 L 111.33 90.75 L 109.25 91.75 L 108.08 92.92 L 102.33 95.92 L 100.33 96.00 L 98.50 97.00 L 85.58 97.00 L 84.42 96.00 L 82.58 95.92 Z M 62.33 69.50 L 78.42 69.42 L 79.25 70.08 L 79.25 70.92 L 78.33 72.58 L 78.33 74.25 L 77.42 75.42 L 77.42 77.00 L 76.50 78.25 L 76.58 79.67 L 76.00 80.33 L 75.58 81.67 L 74.92 82.33 L 74.67 83.58 L 73.92 84.33 L 73.58 85.50 L 71.67 87.58 L 71.17 87.50 L 70.75 87.00 L 69.92 86.67 L 69.00 85.25 L 66.75 82.83 L 66.25 81.42 L 63.83 77.00 L 63.75 75.25 L 62.83 74.17 L 62.83 71.67 L 61.92 70.58 L 61.92 69.92 Z M 20.17 69.75 L 20.58 69.42 L 52.00 69.67 L 52.83 70.58 L 53.17 72.50 L 54.08 73.67 L 54.17 75.50 L 55.08 76.50 L 55.00 78.17 L 56.00 80.75 L 59.67 86.42 L 60.00 87.83 L 61.58 89.33 L 61.83 90.58 L 63.50 92.33 L 63.42 93.75 L 62.58 94.83 L 61.33 95.08 L 60.33 96.00 L 58.42 96.08 L 57.42 97.00 L 43.83 97.00 L 42.58 96.00 L 41.00 96.00 L 39.75 95.08 L 38.42 95.08 L 36.25 94.08 L 34.75 92.67 L 30.33 90.25 L 26.67 86.50 L 26.42 85.33 L 23.08 81.00 L 22.83 79.08 L 21.00 76.25 L 20.92 73.83 L 20.00 72.50 Z M 19.08 50.08 L 20.42 49.00 L 51.83 49.08 L 52.33 49.58 L 52.25 55.25 L 51.42 57.83 L 51.42 61.17 L 50.67 61.83 L 18.58 61.83 L 18.08 61.33 L 18.08 58.58 L 19.08 56.17 Z M 72.67 28.83 L 75.50 31.67 L 76.58 33.58 L 77.42 34.58 L 77.58 36.42 L 78.42 37.50 L 78.33 38.92 L 79.33 40.33 L 79.25 41.00 L 78.50 41.42 L 65.25 41.33 L 64.67 40.58 L 64.58 39.67 L 65.42 38.50 L 65.67 37.42 L 66.42 36.50 L 66.58 35.50 L 68.00 33.92 L 68.50 32.58 L 72.00 29.00 Z M 80.17 23.67 L 81.50 22.33 L 82.75 22.00 L 83.75 21.17 L 85.50 21.08 L 86.58 20.17 L 99.25 20.17 L 100.33 21.08 L 103.00 21.17 L 104.25 22.08 L 107.75 23.08 L 109.42 24.67 L 112.67 26.00 L 117.08 30.42 L 120.17 35.50 L 120.17 37.00 L 121.17 38.50 L 121.08 40.83 L 120.42 41.42 L 88.50 41.42 L 87.92 40.67 L 87.92 38.33 L 86.92 36.92 L 86.92 34.50 L 86.17 33.75 L 84.75 30.33 L 80.75 25.42 Z M 64.58 23.67 L 63.33 26.33 L 61.08 28.58 L 60.67 29.83 L 59.17 31.33 L 58.75 32.75 L 57.33 34.33 L 56.08 37.00 L 55.92 38.33 L 55.08 39.25 L 55.08 40.75 L 54.42 41.42 L 22.58 41.50 L 22.17 41.17 L 22.92 39.42 L 22.83 38.42 L 26.83 31.42 L 33.17 25.17 L 41.00 21.17 L 43.58 21.08 L 44.75 20.17 L 57.50 20.17 L 58.92 21.00 L 60.83 21.17 L 63.08 22.17 Z" fill="#5D4232" fill-rule="evenodd"/></svg>
+      <div class="cw"><div class="nm">Contabilidade Cricon</div><div class="tg">Contabilizando seu sucesso!</div></div>
+    </div>
+  </div>
+
+  <div id="fsaNotice" class="notice" style="display:none;">
+    Este navegador não permite substituir o arquivo original automaticamente (funciona no Chrome e no Edge). O PDF sem senha vai ser <b>baixado</b> — depois é só substituir o arquivo original manualmente.
+  </div>
+
+  <div class="card">
+    <h2>1. Escolha os PDFs</h2>
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon">📄</div>
+      <div class="dz-text"><b>Clique para escolher</b> ou arraste os PDFs aqui</div>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple>
+    <div class="filelist" id="fileList"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Senha atual do PDF</h2>
+    <div class="field">
+      <label for="pwInput">Senha</label>
+      <div class="pw-row">
+        <input type="password" id="pwInput" placeholder="Digite a senha do PDF" autocomplete="off">
+        <button class="pw-toggle" id="pwToggle" type="button" title="Mostrar/ocultar senha">👁</button>
+      </div>
+      <div class="hint">A mesma senha é testada em todos os arquivos selecionados.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="runBtn">Remover senha e substituir</button>
+      <button class="btn ghost" id="clearBtn">Limpar lista</button>
+      <span class="status-line" id="statusLine"></span>
+    </div>
+  </div>
+
+  <footer>Processamento 100% local no navegador — nenhum PDF é enviado para servidor algum.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.js"></script>
+<script>
+const QPDF_WASM_URL = "https://cdn.jsdelivr.net/npm/@neslinesli93/qpdf-wasm@0.3.0/dist/qpdf.wasm";
+const supportsFSAccess = 'showOpenFilePicker' in window;
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileListEl = document.getElementById('fileList');
+const pwInput = document.getElementById('pwInput');
+const pwToggle = document.getElementById('pwToggle');
+const runBtn = document.getElementById('runBtn');
+const clearBtn = document.getElementById('clearBtn');
+const statusLine = document.getElementById('statusLine');
+const fsaNotice = document.getElementById('fsaNotice');
+
+if (!supportsFSAccess) fsaNotice.style.display = 'block';
+
+// items: { id, name, size, handle (FileSystemFileHandle|null), file (File), status, message }
+let items = [];
+let seq = 0;
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderList() {
+  fileListEl.innerHTML = '';
+  for (const it of items) {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    const badgeClass = { pending: 'pending', processing: 'processing', ok: 'ok', err: 'err' }[it.status];
+    const badgeText = { pending: 'Pendente', processing: 'Removendo...', ok: it.message || 'OK', err: it.message || 'Erro' }[it.status];
+    row.innerHTML = `
+      <span class="fi-name" title="${it.name}">${it.name}</span>
+      <span class="fi-size">${fmtSize(it.size)}</span>
+      <span class="badge ${badgeClass}">${badgeText}</span>
+      <button class="fi-remove" data-id="${it.id}" title="Remover da lista">✕</button>
+    `;
+    fileListEl.appendChild(row);
+  }
+  fileListEl.querySelectorAll('.fi-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      items = items.filter(it => it.id !== Number(btn.dataset.id));
+      renderList();
+    });
+  });
+}
+
+function addFile(name, size, handle, file) {
+  if (!name.toLowerCase().endsWith('.pdf')) return;
+  items.push({ id: seq++, name, size, handle, file, status: 'pending', message: '' });
+}
+
+async function addFromFileSystemHandle(handle) {
+  const file = await handle.getFile();
+  addFile(file.name, file.size, handle, file);
+}
+
+dropzone.addEventListener('click', () => {
+  if (supportsFSAccess) {
+    window.showOpenFilePicker({
+      multiple: true,
+      types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }]
+    }).then(async (handles) => {
+      for (const h of handles) await addFromFileSystemHandle(h);
+      renderList();
+    }).catch(() => {});
+  } else {
+    fileInput.click();
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  for (const file of fileInput.files) addFile(file.name, file.size, null, file);
+  fileInput.value = '';
+  renderList();
+});
+
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  const dtItems = Array.from(e.dataTransfer.items || []);
+  if (supportsFSAccess && dtItems.length && dtItems[0].getAsFileSystemHandle) {
+    for (const it of dtItems) {
+      if (it.kind !== 'file') continue;
+      try {
+        const handle = await it.getAsFileSystemHandle();
+        if (handle && handle.kind === 'file') await addFromFileSystemHandle(handle);
+      } catch (err) {}
+    }
+  } else {
+    for (const file of e.dataTransfer.files) addFile(file.name, file.size, null, file);
+  }
+  renderList();
+});
+
+pwToggle.addEventListener('click', () => {
+  pwInput.type = pwInput.type === 'password' ? 'text' : 'password';
+});
+
+clearBtn.addEventListener('click', () => {
+  items = [];
+  statusLine.textContent = '';
+  statusLine.className = 'status-line';
+  renderList();
+});
+
+let qpdfPromise = null;
+function getQpdf() {
+  if (!qpdfPromise) {
+    qpdfPromise = Module({
+      locateFile: () => QPDF_WASM_URL,
+      noInitialRun: true,
+      print: () => {},
+      printErr: () => {}
+    });
+  }
+  return qpdfPromise;
+}
+
+function downloadBytes(bytes, filename) {
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function processItem(it, password, qpdf) {
+  it.status = 'processing';
+  it.message = '';
+  renderList();
+  try {
+    const inputBytes = new Uint8Array(await it.file.arrayBuffer());
+    try { qpdf.FS.unlink('/in.pdf'); } catch (e) {}
+    try { qpdf.FS.unlink('/out.pdf'); } catch (e) {}
+    qpdf.FS.writeFile('/in.pdf', inputBytes);
+
+    qpdf.callMain(['--password=' + password, '--decrypt', '/in.pdf', '/out.pdf']);
+
+    let outBytes = null;
+    try { outBytes = qpdf.FS.readFile('/out.pdf'); } catch (e) { outBytes = null; }
+
+    if (!outBytes || !outBytes.length) {
+      it.status = 'err';
+      it.message = 'Senha incorreta ou arquivo inválido';
+      return;
+    }
+
+    if (it.handle) {
+      const perm = await it.handle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        it.status = 'err'; it.message = 'Permissão de escrita negada';
+        return;
+      }
+      const writable = await it.handle.createWritable();
+      await writable.write(outBytes);
+      await writable.close();
+      it.status = 'ok'; it.message = 'Substituído';
+    } else {
+      downloadBytes(outBytes, it.name);
+      it.status = 'ok'; it.message = 'Baixado';
+    }
+  } catch (err) {
+    it.status = 'err'; it.message = 'Erro: ' + (err.message || String(err));
+  } finally {
+    try { qpdf.FS.unlink('/in.pdf'); } catch (e) {}
+    try { qpdf.FS.unlink('/out.pdf'); } catch (e) {}
+    renderList();
+  }
+}
+
+runBtn.addEventListener('click', async () => {
+  if (!items.length) {
+    statusLine.className = 'status-line err';
+    statusLine.textContent = 'Escolha pelo menos um PDF.';
+    return;
+  }
+  const password = pwInput.value;
+  runBtn.disabled = true;
+  clearBtn.disabled = true;
+  statusLine.className = 'status-line';
+  statusLine.textContent = 'Carregando motor de PDF...';
+  try {
+    const qpdf = await getQpdf();
+    let ok = 0, err = 0;
+    for (const it of items) {
+      if (it.status === 'ok') continue;
+      statusLine.textContent = `Processando ${it.name}...`;
+      await processItem(it, password, qpdf);
+      if (it.status === 'ok') ok++; else err++;
+    }
+    statusLine.className = err ? 'status-line err' : 'status-line ok';
+    statusLine.textContent = `Concluído: ${ok} arquivo(s) sem senha, ${err} com erro.`;
+  } finally {
+    runBtn.disabled = false;
+    clearBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
