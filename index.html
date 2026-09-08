@@ -94,9 +94,26 @@ input[type=file]{display:none;}
 
 .chk-label{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--ink);cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-transform:none;letter-spacing:normal;}
 .chk-label input{width:15px;height:15px;cursor:pointer;}
-#cnpjField input{width:100%;max-width:200px;padding:8px 9px;border:1.5px solid var(--rule-strong);border-radius:4px;font-size:14px;font-family:'IBM Plex Mono',monospace;background:var(--paper-raised);color:var(--ink);}
-#cnpjField input:focus{outline:none;border-color:var(--ink);}
+#cnpjField input,#cnpjField select{width:100%;max-width:280px;padding:8px 9px;border:1.5px solid var(--rule-strong);border-radius:4px;font-size:14px;font-family:'IBM Plex Mono',monospace;background:var(--paper-raised);color:var(--ink);}
+#cnpjField input:focus,#cnpjField select:focus{outline:none;border-color:var(--ink);}
 #cnpjComputedHint{font-family:'IBM Plex Mono',monospace;color:var(--green-ink);font-weight:600;}
+#cnpjComputedHint.warn{color:var(--amber);}
+.opt-warn{color:var(--amber);}
+
+.search-results{position:relative;max-width:280px;}
+.search-results .sr-item{background:var(--paper-raised);border:1.5px solid var(--rule-strong);border-top:none;padding:7px 9px;font-size:12.5px;cursor:pointer;}
+.search-results .sr-item:first-child{border-top:1.5px solid var(--rule-strong);}
+.search-results .sr-item:hover{background:var(--accent-bg);}
+.search-results .sr-item .sr-name{display:block;font-weight:600;}
+.search-results .sr-item .sr-doc{display:block;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:11px;}
+
+.custom-bank-form{max-width:280px;border:1.5px dashed var(--rule-strong);border-radius:5px;padding:10px;margin-top:8px;display:none;}
+.custom-bank-form.show{display:block;}
+.custom-bank-form label{display:block;font-size:11px;color:var(--ink-soft);margin:6px 0 3px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;}
+.custom-bank-form label:first-child{margin-top:0;}
+.custom-bank-form input,.custom-bank-form select{width:100%;padding:6px 8px;border:1.5px solid var(--rule-strong);border-radius:4px;font-size:13px;font-family:'IBM Plex Mono',monospace;}
+.custom-bank-form .cb-row{display:flex;gap:8px;margin-top:10px;}
+.custom-bank-form .cb-row button{flex:1;font-size:12.5px;padding:7px 10px;}
 
 footer{margin-top:30px;color:var(--ink-soft);font-size:11.5px;text-align:center;}
 </style>
@@ -132,12 +149,46 @@ footer{margin-top:30px;color:var(--ink-soft);font-size:11.5px;text-align:center;
   <div class="card">
     <h2>2. Senha atual do PDF</h2>
     <div class="field">
-      <label class="chk-label"><input type="checkbox" id="cnpjMode"> Calcular senha a partir do CNPJ (5 primeiros números)</label>
+      <label class="chk-label"><input type="checkbox" id="cnpjMode"> Calcular senha automaticamente pelo CNPJ (padrão do banco)</label>
     </div>
-    <div class="field" id="cnpjField" style="display:none;">
-      <label for="cnpjInput">CNPJ da empresa</label>
-      <input type="text" id="cnpjInput" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18">
-      <div class="hint" id="cnpjComputedHint"></div>
+    <div id="cnpjField" style="display:none;">
+      <div class="field">
+        <label for="bankSelect">Banco</label>
+        <select id="bankSelect">
+          <option value="">Selecione o banco...</option>
+        </select>
+        <div class="custom-bank-form" id="customBankForm">
+          <label for="cbName">Nome do banco</label>
+          <input type="text" id="cbName" placeholder="Ex: Sicoob">
+          <label for="cbDoc">Senha vem do</label>
+          <select id="cbDoc">
+            <option value="CNPJ">CNPJ</option>
+            <option value="CPF">CPF</option>
+          </select>
+          <label for="cbDigits">Quantidade de dígitos</label>
+          <input type="number" id="cbDigits" value="5" min="1" max="14">
+          <label for="cbFrom">De onde</label>
+          <select id="cbFrom">
+            <option value="start">Primeiros dígitos</option>
+            <option value="end">Últimos dígitos</option>
+          </select>
+          <div class="cb-row">
+            <button class="btn" id="cbSave" type="button">Salvar e usar</button>
+            <button class="btn ghost" id="cbCancel" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="position:relative;">
+        <label for="companySearch">Buscar empresa no cadastro compartilhado</label>
+        <input type="text" id="companySearch" placeholder="Nome ou CNPJ/CPF da empresa" autocomplete="off">
+        <div class="search-results" id="companyResults"></div>
+        <span class="hint" id="cloudStatusHint"></span>
+      </div>
+      <div class="field">
+        <label for="cnpjInput">CNPJ/CPF da empresa</label>
+        <input type="text" id="cnpjInput" placeholder="00.000.000/0000-00" inputmode="numeric" maxlength="18">
+        <div class="hint" id="cnpjComputedHint"></div>
+      </div>
     </div>
     <div class="field" id="manualPwField">
       <label for="pwInput">Senha</label>
@@ -179,16 +230,90 @@ const manualPwField = document.getElementById('manualPwField');
 
 if (!supportsFSAccess) fsaNotice.style.display = 'block';
 
+const bankSelect = document.getElementById('bankSelect');
+const customBankForm = document.getElementById('customBankForm');
+const cbName = document.getElementById('cbName');
+const cbDoc = document.getElementById('cbDoc');
+const cbDigits = document.getElementById('cbDigits');
+const cbFrom = document.getElementById('cbFrom');
+const cbSave = document.getElementById('cbSave');
+const cbCancel = document.getElementById('cbCancel');
+const companySearch = document.getElementById('companySearch');
+const companyResults = document.getElementById('companyResults');
+const cloudStatusHint = document.getElementById('cloudStatusHint');
+
+// digits: quantidade de dígitos usados; from: 'start' ou 'end'; confirmed: true = confirmado por alguém do escritório
+const BUILTIN_BANK_PATTERNS = [
+  { id: 'unicred', label: 'Unicred', doc: 'CNPJ', digits: 5, from: 'start', confirmed: true },
+  { id: 'inter', label: 'Banco Inter', doc: 'CPF', digits: 6, from: 'start', confirmed: false, note: 'Não confirmado — achado em fórum, referente a fatura pessoa física. Teste e me avisa se funcionar.' },
+  { id: 'itau', label: 'Itaú', doc: 'CPF', digits: 5, from: 'start', confirmed: false, note: 'Não confirmado — achado em fórum, referente a fatura pessoa física. Teste e me avisa se funcionar.' },
+  { id: 'mercadopago', label: 'Mercado Pago', doc: 'CNPJ', digits: 5, from: 'start', confirmed: false, note: 'Não confirmado — suporte do Mercado Pago cita variações (4 ou 5 dígitos, início ou fim). Se não funcionar, tente também os 4 últimos dígitos.' },
+];
+
+function loadCustomBanks() {
+  try { return JSON.parse(localStorage.getItem('remover_senha_pdf_bancos_custom') || '[]'); }
+  catch (e) { return []; }
+}
+function saveCustomBanks(list) {
+  localStorage.setItem('remover_senha_pdf_bancos_custom', JSON.stringify(list));
+}
+
+function renderBankOptions() {
+  const custom = loadCustomBanks();
+  const selected = bankSelect.value;
+  bankSelect.innerHTML = '<option value="">Selecione o banco...</option>';
+  const groupConf = document.createElement('optgroup'); groupConf.label = 'Confirmado';
+  const groupSug = document.createElement('optgroup'); groupSug.label = 'Sugerido — não confirmado, teste antes';
+  const groupCustom = document.createElement('optgroup'); groupCustom.label = 'Cadastrado por vocês';
+  for (const b of BUILTIN_BANK_PATTERNS) {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = b.label;
+    (b.confirmed ? groupConf : groupSug).appendChild(opt);
+  }
+  for (const b of custom) {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = b.label;
+    groupCustom.appendChild(opt);
+  }
+  if (groupConf.children.length) bankSelect.appendChild(groupConf);
+  if (groupSug.children.length) bankSelect.appendChild(groupSug);
+  if (groupCustom.children.length) bankSelect.appendChild(groupCustom);
+  const otherOpt = document.createElement('option');
+  otherOpt.value = '__custom__';
+  otherOpt.textContent = '+ Adicionar outro banco...';
+  bankSelect.appendChild(otherOpt);
+  if (selected) bankSelect.value = selected;
+}
+
+function getBankById(id) {
+  return BUILTIN_BANK_PATTERNS.find(b => b.id === id) || loadCustomBanks().find(b => b.id === id);
+}
+
 function updateCnpjPassword() {
+  const bank = getBankById(bankSelect.value);
   const digits = cnpjInput.value.replace(/\D/g, '');
-  if (digits.length < 5) {
-    cnpjComputedHint.textContent = 'Digite pelo menos os 5 primeiros números do CNPJ.';
+  cnpjComputedHint.className = 'hint';
+
+  if (!bank) {
+    cnpjComputedHint.textContent = 'Selecione o banco.';
     pwInput.value = '';
     return;
   }
-  const senha = digits.slice(0, 5);
+  if (digits.length < bank.digits) {
+    cnpjComputedHint.textContent = `Digite o ${bank.doc} completo (precisa de pelo menos ${bank.digits} dígitos).`;
+    pwInput.value = '';
+    return;
+  }
+  const senha = bank.from === 'end' ? digits.slice(-bank.digits) : digits.slice(0, bank.digits);
   pwInput.value = senha;
-  cnpjComputedHint.textContent = `Senha calculada: ${senha}`;
+  if (bank.confirmed) {
+    cnpjComputedHint.textContent = `Senha calculada (${bank.label}): ${senha}`;
+  } else {
+    cnpjComputedHint.className = 'hint warn';
+    cnpjComputedHint.textContent = `Senha calculada: ${senha} — ${bank.note || 'padrão não confirmado, teste antes de confiar.'}`;
+  }
 }
 
 cnpjMode.addEventListener('change', () => {
@@ -196,6 +321,7 @@ cnpjMode.addEventListener('change', () => {
   cnpjField.style.display = on ? 'block' : 'none';
   manualPwField.style.display = on ? 'none' : 'block';
   if (on) {
+    renderBankOptions();
     updateCnpjPassword();
   } else {
     pwInput.value = '';
@@ -203,7 +329,79 @@ cnpjMode.addEventListener('change', () => {
   }
 });
 
+bankSelect.addEventListener('change', () => {
+  if (bankSelect.value === '__custom__') {
+    customBankForm.classList.add('show');
+    return;
+  }
+  customBankForm.classList.remove('show');
+  updateCnpjPassword();
+});
+
+cbCancel.addEventListener('click', () => {
+  customBankForm.classList.remove('show');
+  bankSelect.value = '';
+  updateCnpjPassword();
+});
+
+cbSave.addEventListener('click', () => {
+  const label = cbName.value.trim();
+  const digits = parseInt(cbDigits.value, 10);
+  if (!label || !digits || digits < 1) {
+    alert('Preencha o nome do banco e a quantidade de dígitos.');
+    return;
+  }
+  const id = 'custom_' + label.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + Date.now();
+  const bank = { id, label, doc: cbDoc.value, digits, from: cbFrom.value, confirmed: true };
+  const custom = loadCustomBanks();
+  custom.push(bank);
+  saveCustomBanks(custom);
+  renderBankOptions();
+  bankSelect.value = id;
+  customBankForm.classList.remove('show');
+  cbName.value = '';
+  cbDigits.value = '5';
+  updateCnpjPassword();
+});
+
 cnpjInput.addEventListener('input', updateCnpjPassword);
+
+// --- busca de empresa no cadastro compartilhado (Firestore "conversoes-cibele") ---
+function loadClientesCache() {
+  try { return JSON.parse(localStorage.getItem('cibele_clientes_fornecedores') || '{}'); }
+  catch (e) { return {}; }
+}
+let clientesDB = loadClientesCache();
+window.refreshClientesDB = (data) => { clientesDB = data; };
+
+function renderCompanyResults(list) {
+  companyResults.innerHTML = '';
+  for (const c of list.slice(0, 8)) {
+    const div = document.createElement('div');
+    div.className = 'sr-item';
+    div.innerHTML = `<span class="sr-name">${c.razao_social || '(sem nome)'}</span><span class="sr-doc">${c.documento || c.id}</span>`;
+    div.addEventListener('click', () => {
+      cnpjInput.value = c.documento || c.id;
+      companySearch.value = c.razao_social || c.documento || c.id;
+      companyResults.innerHTML = '';
+      updateCnpjPassword();
+    });
+    companyResults.appendChild(div);
+  }
+}
+
+companySearch.addEventListener('input', () => {
+  const q = companySearch.value.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
+  if (!q) { companyResults.innerHTML = ''; return; }
+  const all = Object.keys(clientesDB).map(k => ({ id: k, ...clientesDB[k] }));
+  const matches = all.filter(c => {
+    const nome = (c.razao_social || '').toLowerCase();
+    const doc = (c.documento || c.id || '').replace(/\D/g, '');
+    return (q.length >= 3 && nome.includes(q)) || (qDigits.length >= 3 && doc.includes(qDigits));
+  });
+  renderCompanyResults(matches);
+});
 
 // items: { id, name, size, handle (FileSystemFileHandle|null), file (File), status, message }
 let items = [];
@@ -394,6 +592,53 @@ runBtn.addEventListener('click', async () => {
     runBtn.disabled = false;
     clearBtn.disabled = false;
   }
+});
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+// Mesmo projeto Firebase e mesma collection "clientes" que as outras
+// ferramentas do escritório usam (Cadastro de Clientes e Fornecedores,
+// Baixas de Parcelas, Conversões Cibele) — cadastro único compartilhado.
+// Aqui só é lido (nunca gravado).
+const firebaseConfig = {
+  apiKey: "AIzaSyCBIQkYYNt3K4gZ0OGqoqsU8Jnrsgxif5k",
+  authDomain: "conversoes-cibele.firebaseapp.com",
+  projectId: "conversoes-cibele",
+  storageBucket: "conversoes-cibele.firebasestorage.app",
+  messagingSenderId: "401784315449",
+  appId: "1:401784315449:web:5d459a524059c0978bb7e8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const cloudStatusHint = document.getElementById('cloudStatusHint');
+function setCloudHint(text) { if (cloudStatusHint) cloudStatusHint.textContent = text; }
+setCloudHint('Conectando ao cadastro compartilhado...');
+
+signInAnonymously(auth).catch((err) => {
+  console.error('Firebase auth error', err);
+  setCloudHint('Cadastro compartilhado indisponível — busca usando só o cache deste navegador.');
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) return;
+  onSnapshot(collection(db, 'clientes'), (snap) => {
+    const cloudData = {};
+    snap.forEach((d) => { cloudData[d.id] = d.data(); });
+    window.clientesDB = cloudData;
+    try { localStorage.setItem('cibele_clientes_fornecedores', JSON.stringify(cloudData)); } catch (e) {}
+    if (window.refreshClientesDB) window.refreshClientesDB(cloudData);
+    setCloudHint('Cadastro compartilhado sincronizado.');
+  }, (err) => {
+    console.error('clientes onSnapshot', err);
+    setCloudHint('Erro ao sincronizar cadastro — usando cache local.');
+  });
 });
 </script>
 </body>
